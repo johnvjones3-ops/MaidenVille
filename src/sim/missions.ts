@@ -24,11 +24,13 @@ export const MISSIONS: MissionDef[] = [
   { id: 'm_card', item: 'card', itemName: 'Thank-You Card', target: 'hospital', pickupS: before('hospital', 150), verb: "Bring the thank-you card to the Hospital's welcome area" },
 ];
 
-export const DELIVERY_HALF = 7;
+export const DELIVERY_HALF = 8;
+/** The delivery mat sits on the approach, centred this far before the landmark junction. */
+export const DELIVERY_OFFSET = 15;
 
-/** Lane of the delivery mat: the lane nearest the landmark. */
-export function deliveryLane(target: LandmarkId): number {
-  return LANDMARK_BY_ID[target].side < 0 ? 0 : 2;
+/** Lane of the delivery mat: the centre lane, pointing straight at the building. */
+export function deliveryLane(_target: LandmarkId): number {
+  return 1;
 }
 
 export class MissionSystem {
@@ -77,7 +79,7 @@ export class MissionSystem {
     const def = this.carrying;
     if (!def) return null;
     const l = LANDMARK_BY_ID[def.target];
-    if (Math.abs(ROUTE.delta(s, l.s)) > DELIVERY_HALF) return null;
+    if (Math.abs(ROUTE.delta(s, l.s - DELIVERY_OFFSET)) > DELIVERY_HALF) return null;
     if (lane !== deliveryLane(def.target)) return null;
     if (this.completed.has(def.id)) return null;
     this.completed.add(def.id);

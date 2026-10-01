@@ -3,7 +3,7 @@ import { MODES } from '../src/config';
 import { CORNER_MARGIN_AFTER, CORNER_MARGIN_BEFORE, RouteGenerator } from '../src/sim/generator';
 import { RunSim } from '../src/sim/run';
 import { allLanes, obstaclesToRows, timingsFor, validateRows } from '../src/sim/validator';
-import { LANDMARKS, LANDMARK_VIEW_HALF } from '../src/world/landmarks';
+import { LANDMARKS, inLandmarkZone, landmarkWorld } from '../src/world/landmarks';
 import { ROUTE } from '../src/world/route';
 import { autopilot } from './helpers';
 
@@ -19,10 +19,29 @@ describe('CityRoute', () => {
     const b = ROUTE.pose(ROUTE.length - 1e-6);
     expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeLessThan(0.01);
   });
-  it('starts heading north up the central avenue and turns right four times', () => {
+  it('winds through the city with turns in both directions', () => {
     expect(ROUTE.pose(0).heading).toBeCloseTo(0);
-    expect(ROUTE.corners.length).toBe(4);
-    expect(ROUTE.pose(ROUTE.corners[0].s1 + 1).heading).toBeCloseTo(Math.PI / 2);
+    expect(ROUTE.corners.length).toBeGreaterThanOrEqual(10);
+    expect(ROUTE.corners.some((c) => c.turn > 0)).toBe(true);
+    expect(ROUTE.corners.some((c) => c.turn < 0)).toBe(true);
+  });
+  it('puts every landmark straight ahead at the end of a street, centred on the course', () => {
+    for (const l of LANDMARKS) {
+      const w = landmarkWorld(l);
+      // standing 40 m before the junction, the building lies along the direction of travel
+      const p = ROUTE.pose(l.s - 40);
+      const dx = w.x - p.x;
+      const dz = w.z - p.z;
+      const fwd = dx * Math.sin(p.heading) - dz * Math.cos(p.heading);
+      const side = dx * Math.cos(p.heading) + dz * Math.sin(p.heading);
+      expect(fwd, l.id).toBeGreaterThan(40);
+      expect(Math.abs(side), l.id).toBeLessThan(6);
+      // and the building never sits on the course itself
+      for (let s = 0; s < ROUTE.length; s += 2) {
+        const q = ROUTE.pose(s);
+        expect(Math.hypot(q.x - w.x, q.z - w.z), `${l.id} vs s=${s}`).toBeGreaterThan(l.depth / 2 + 9);
+      }
+    }
   });
   it('places landmarks at stable, distinct route positions', () => {
     const ids = new Set(LANDMARKS.map((l) => l.id));
@@ -64,7 +83,7 @@ describe('Generated courses', () => {
               const inside = s >= c.s0 - CORNER_MARGIN_BEFORE && s <= c.s1 + CORNER_MARGIN_AFTER;
               expect(inside, `corner overlap at s=${s}`).toBe(false);
             }
-            for (const l of LANDMARKS) expect(Math.abs(ROUTE.delta(s, l.s))).toBeGreaterThanOrEqual(LANDMARK_VIEW_HALF - 0.01);
+            expect(inLandmarkZone(s), `landmark zone at s=${s}`).toBe(false);
           }
         }
       }

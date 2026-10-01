@@ -105,7 +105,6 @@ export class SceneManager {
   followSun(x: number, z: number) {
     this.sun.position.set(x + this.sunDir.x * 120, this.sunDir.y * 120, z + this.sunDir.z * 120);
     this.sun.target.position.set(x, 0, z);
-    this.sky.position.set(x, 0, z);
   }
 
   resize(w: number, h: number) {
@@ -124,11 +123,15 @@ export class SceneManager {
     const hgt = Math.max(0, this.camera.position.y - 4);
     const far = QUALITY[this.quality].fogFar;
     fog.near = 110 + hgt * 2.2;
-    fog.far = far + hgt * 3.2;
+    // stay inside the camera's far plane so the edge of the world is always fully fogged
+    fog.far = Math.min(far + hgt * 3.2, this.camera.far * 0.62);
+    fog.near = Math.min(fog.near, fog.far * 0.5);
   }
 
   render() {
     this.updateFog();
+    // the sky dome travels with the camera so its horizon always sits at eye level
+    this.sky.position.copy(this.camera.position);
     this.renderer.render(this.scene, this.camera);
   }
 }

@@ -6,8 +6,9 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { PALETTE, QUALITY, type QualityId } from '../config';
 import { Rng } from '../core/rng';
-import { ADDITIONS, LANDMARKS, landmarkWorld } from '../world/landmarks';
-import { ROAD, ROUTE } from '../world/route';
+import { ADDITIONS, aheadOfCorner, JUNCTION_CLEAR, LANDMARKS, landmarkWorld } from '../world/landmarks';
+import { DELIVERY_OFFSET } from '../sim/missions';
+import { CORNER_RADIUS, CORNERS, ROAD, ROUTE } from '../world/route';
 import { box, basic, cyl, gable, plane, std } from './kit';
 import { buildLandmark } from './landmarkModels';
 import { buildCar, flowerBed } from './props';
@@ -30,8 +31,59 @@ function rectAABB(cx: number, cz: number, yaw: number, w: number, d: number, pad
   return { x0: cx - hx, x1: cx + hx, z0: cz - hz, z1: cz + hz };
 }
 
-/** Core rectangle of the loop (street centrelines). */
-const LOOP = { x0: 0, x1: 260, z0: -340, z1: 60 };
+/** Bounding box of the route's street grid (plus a margin). */
+const BOUNDS = {
+  x0: Math.min(...CORNERS.map((c) => c.x)) - 40,
+  x1: Math.max(...CORNERS.map((c) => c.x)) + 40,
+  z0: Math.min(...CORNERS.map((c) => c.z)) - 40,
+  z1: Math.max(...CORNERS.map((c) => c.z)) + 40,
+};
+
+const ROUTE_SAMPLES: Array<[number, number]> = [];
+for (let s = 0; s < ROUTE.length; s += 5) {
+  const p = ROUTE.pose(s);
+  ROUTE_SAMPLES.push([p.x, p.z]);
+}
+/** Distance from a point to the running route's centre line (approximate, 5 m samples). */
+function distToRoute(x: number, z: number): number {
+  let best = Infinity;
+  for (const [px, pz] of ROUTE_SAMPLES) {
+    const d = (px - x) * (px - x) + (pz - z) * (pz - z);
+    if (d < best) best = d;
+  }
+  return Math.sqrt(best);
+}
+
+/**
+ * Side streets that make each landmark junction read as a T, continue the grid past the plain corners,
+ * and a few long avenues out toward the horizon. None of them carry traffic onto the course.
+ */
+function sideStreets(): Array<[number, number, number, number]> {
+  const out: Array<[number, number, number, number]> = [];
+  const landmarkCorners = new Set([...LANDMARKS.map((l) => l.corner), ADDITIONS.parkCorner, ADDITIONS.plazaCorner]);
+  ROUTE.corners.forEach((c, i) => {
+    const v = c.vertex;
+    const fx = Math.round(Math.sin(c.headingIn));
+    const fz = Math.round(-Math.cos(c.headingIn));
+    if (landmarkCorners.has(i)) {
+      // the other arm of the T: opposite to the way the route turns
+      const rx = Math.round(Math.cos(c.headingIn)) * -c.turn;
+      const rz = Math.round(Math.sin(c.headingIn)) * -c.turn;
+      out.push([v.x, v.z, v.x + rx * 70, v.z + rz * 70]);
+    } else {
+      // plain corner: the street carries straight on
+      out.push([v.x, v.z, v.x + fx * 100, v.z + fz * 100]);
+    }
+  });
+  out.push(
+    [BOUNDS.x0 - 140, BOUNDS.z0 - 70, BOUNDS.x1 + 140, BOUNDS.z0 - 70],
+    [BOUNDS.x0 - 140, BOUNDS.z1 + 70, BOUNDS.x1 + 140, BOUNDS.z1 + 70],
+    [BOUNDS.x0 - 70, BOUNDS.z0 - 140, BOUNDS.x0 - 70, BOUNDS.z1 + 140],
+    [BOUNDS.x1 + 70, BOUNDS.z0 - 140, BOUNDS.x1 + 70, BOUNDS.z1 + 140],
+  );
+  // keep a plane's start before its end for the axis-aligned mesh code
+  return out.map(([a, b, c2, d]) => (a > c2 || b > d ? [c2, d, a, b] : [a, b, c2, d]));
+}
 
 export interface CityRefs {
   group: THREE.Group;
@@ -81,19 +133,7 @@ export function buildCity(quality: QualityId): CityRefs {
 
   // ---------------------------------------------------------------- decorative side streets (no traffic on the course)
   const asph = plainAsphaltTexture();
-  const decoStreets: Array<[number, number, number, number]> = [
-    // x0,z0,x1,z1 (axis aligned)
-    [0, 60, 0, 520],
-    [0, -340, 0, -1100],
-    [260, 60, 260, 420],
-    [260, -340, 260, -900],
-    [-520, 60, 0, 60],
-    [260, 60, 760, 60],
-    [-520, -340, 0, -340],
-    [260, -340, 760, -340],
-    [-300, -130, 0, -130],
-    [260, -150, 600, -150],
-  ];
+  const decoStreets = sideStreets();
   for (const [x0, z0, x1, z1] of decoStreets) {
     const len = Math.hypot(x1 - x0, z1 - z0);
     const t = asph.clone();
@@ -105,36 +145,25 @@ export function buildCity(quality: QualityId): CityRefs {
     m.position.set((x0 + x1) / 2, 0.02, (z0 + z1) / 2);
     m.receiveShadow = true;
     root.add(m);
-    // sidewalks alongside
     for (const side of [-1, 1]) {
-      // sidewalks stop short of the intersections at each end
-      const s = new THREE.Mesh(new THREE.PlaneGeometry(4, Math.max(1, len - 26)), swMat);
-      s.rotation.x = -Math.PI / 2;
-      if (x0 !== x1) s.rotation.z = Math.PI / 2;
+      // sidewalks stop short of the junctions at each end
+      const sw2 = new THREE.Mesh(new THREE.PlaneGeometry(4, Math.max(1, len - 26)), swMat);
+      sw2.rotation.x = -Math.PI / 2;
+      if (x0 !== x1) sw2.rotation.z = Math.PI / 2;
       const off = side * 7.2;
-      s.position.set((x0 + x1) / 2 + (x0 === x1 ? off : 0), 0.1, (z0 + z1) / 2 + (x0 === x1 ? 0 : off));
-      s.receiveShadow = true;
-      root.add(s);
+      sw2.position.set((x0 + x1) / 2 + (x0 === x1 ? off : 0), 0.1, (z0 + z1) / 2 + (x0 === x1 ? 0 : off));
+      sw2.receiveShadow = true;
+      root.add(sw2);
     }
-    // keep buildings off the street
     blocked.push({ x0: Math.min(x0, x1) - 10, x1: Math.max(x0, x1) + 10, z0: Math.min(z0, z1) - 10, z1: Math.max(z0, z1) + 10 });
   }
-  // crosswalks at every route intersection
+  // a crosswalk across the course just before every turn
   const cw = basic(0xffffff, { map: crosswalkTexture(), transparent: true });
-  const crossings: Array<[number, number, number]> = [];
-  for (const c of [
-    [0, 60],
-    [0, -340],
-    [260, -340],
-    [260, 60],
-  ]) {
-    crossings.push([c[0], c[1] + 13, 0], [c[0], c[1] - 13, 0], [c[0] + 13, c[1], Math.PI / 2], [c[0] - 13, c[1], Math.PI / 2]);
-  }
-  crossings.push([0 - 13, -130, Math.PI / 2], [260 + 13, -150, Math.PI / 2], [0, -130 + 8, 0], [0, -130 - 8, 0], [260, -150 + 8, 0], [260, -150 - 8, 0]);
-  for (const [x, z, r] of crossings) {
-    const m = plane(10, 3, cw, x, 0.11, z);
+  for (const c of ROUTE.corners) {
+    const p = aheadOfCorner(c, -CORNER_RADIUS - 3);
+    const m = plane(10, 3, cw, p.x, 0.11, p.z);
     m.rotation.x = -Math.PI / 2;
-    m.rotation.z = r;
+    m.rotation.z = -p.heading;
     root.add(m);
   }
 
@@ -155,29 +184,18 @@ export function buildCity(quality: QualityId): CityRefs {
     root.add(g);
     landmarks.set(l.id, g);
     const pad = l.id === 'store' ? 6 : l.id === 'school' ? 14 : 3;
-    blocked.push(rectAABB(w.x, w.z, w.yaw, l.width + pad * 2, l.depth + (l.id === 'store' ? 30 : 10), 0));
-    // lawn/forecourt between sidewalk and building
-    const apron = ROUTE.worldAt(l.s, l.side * (ROAD.roadHalfWidth + ROAD.sidewalkWidth + (l.setback - 9.4) / 2));
-    const ap = new THREE.Mesh(new THREE.PlaneGeometry(l.width + 6, l.setback - 9.4), std(0xd7ccb9, { rough: 1 }));
+    blocked.push(rectAABB(w.x, w.z, w.yaw, l.width + pad * 2, l.depth + l.frontExtra * 2 + 6, 0));
+    // forecourt between the end of the street and the building (the parking lot covers the store's)
+    const c = ROUTE.corners[l.corner];
+    const edge = ROAD.roadHalfWidth + ROAD.sidewalkWidth;
+    const depth = JUNCTION_CLEAR - edge + (l.id === 'store' ? 0 : l.frontExtra);
+    const ac = aheadOfCorner(c, edge + depth / 2, l.lateral);
+    const ap = new THREE.Mesh(new THREE.PlaneGeometry(l.width + 6, depth), std(0xd7ccb9, { rough: 1 }));
     ap.rotation.x = -Math.PI / 2;
     ap.rotation.z = w.yaw;
-    ap.position.set(apron.x, 0.05, apron.z);
+    ap.position.set(ac.x, 0.05, ac.z);
     ap.receiveShadow = true;
-    if (l.id !== 'store') root.add(ap);
-  }
-
-  // wayfinding signs that face Maddy as she approaches each landmark (so names are readable from the chase camera)
-  for (const l of LANDMARKS) {
-    const p = ROUTE.worldAt(l.s - l.width / 2 - 10, l.side * 10.2);
-    const g = new THREE.Group();
-    g.position.set(p.x, 0, p.z);
-    g.rotation.y = -p.heading; // local +z faces back toward the runner
-    const colors: Record<string, string> = { church: '#8c5bd6', school: '#8a5634', store: '#cc1a24', hospital: '#1f8fd0', emergency: '#d2342b', house_turquoise: '#1aa39a', house_pink: '#d63c8f' };
-    const t = signTexture(l.name.toUpperCase(), { bg: colors[l.id], fg: '#ffffff', w: 768, h: 150, border: '#ffffff' });
-    g.add(plane(4.6, 0.9, basic(0xffffff, { map: t }), 0, 3.3, 0.06));
-    g.add(box(4.8, 1.05, 0.1, std(0x2b2b30), 0, 3.3, 0));
-    g.add(cyl(0.08, 0.08, 3.4, std(0x2b2b30), -2.1, 1.7, 0, 6), cyl(0.08, 0.08, 3.4, std(0x2b2b30), 2.1, 1.7, 0, 6));
-    root.add(g);
+    root.add(ap);
   }
 
   // delivery mats at each landmark (shown only while carrying the matching item)
@@ -203,8 +221,7 @@ export function buildCity(quality: QualityId): CityRefs {
     }
   });
   for (const l of LANDMARKS) {
-    const lane = l.side < 0 ? 0 : 2;
-    const p = ROUTE.worldAt(l.s, (lane - 1) * 2.6);
+    const p = ROUTE.worldAt(l.s - DELIVERY_OFFSET, 0);
     const m = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 14), basic(0xffffff, { map: matTex, transparent: true }));
     m.rotation.x = -Math.PI / 2;
     m.rotation.z = -p.heading;
@@ -222,12 +239,12 @@ export function buildCity(quality: QualityId): CityRefs {
   const plaza = celebrationPlaza();
   root.add(plaza.group);
   blocked.push(plaza.aabb);
-  for (const c of [
-    [10, 50, 'MADDY MAIDEN WAY'],
-    [-10, -330, 'KINGDOM LANE'],
-    [270, -330, 'IMAGINATION PKWY'],
-    [250, 70, 'TARGET SQUARE ROW'],
-  ] as Array<[number, number, string]>) root.add(streetSign(c[0], c[1], c[2]));
+  // street-name signs on the inside of each turn, naming the street Maddy turns into
+  ROUTE.corners.forEach((c, i) => {
+    const next = ROUTE.streets[(i + 1) % ROUTE.streets.length].name;
+    const p = aheadOfCorner(c, -12.5, c.turn * 12.5);
+    root.add(streetSign(p.x, p.z, next.toUpperCase()));
+  });
 
   // ---------------------------------------------------------------- filler buildings along every street
   const fill = new FillerBuilder();
@@ -248,9 +265,6 @@ export function buildCity(quality: QualityId): CityRefs {
           const yaw = Math.atan2(-Math.cos(p.heading) * side, -Math.sin(p.heading) * side);
           const bb = rectAABB(p.x, p.z, yaw, w, d, 0.5);
           if (blocked.some((b) => overlaps(b, bb)) || fillerAABBs.some((b) => overlaps(b, bb))) continue;
-          // the interior of the loop gets a park-like middle: only a single row there
-          const inside = p.x > LOOP.x0 && p.x < LOOP.x1 && p.z > LOOP.z0 && p.z < LOOP.z1;
-          if (inside && row === 1) continue;
           fillerAABBs.push(bb);
           fill.building(rng, p.x, p.z, yaw, w, d, row === 0 ? 1 : 0.8);
         }
@@ -258,10 +272,9 @@ export function buildCity(quality: QualityId): CityRefs {
     }
   }
   // distant city to the horizon
-  for (let x = -560; x <= 820; x += 34) {
-    for (let z = -1060; z <= 520; z += 34) {
-      const nearLoop = x > LOOP.x0 - 60 && x < LOOP.x1 + 60 && z > LOOP.z0 - 60 && z < LOOP.z1 + 60;
-      if (nearLoop) continue;
+  for (let x = BOUNDS.x0 - 520; x <= BOUNDS.x1 + 520; x += 34) {
+    for (let z = BOUNDS.z0 - 620; z <= BOUNDS.z1 + 420; z += 34) {
+      if (distToRoute(x, z) < 48) continue;
       if (rng.next() > 0.62 * q.decorDensity + 0.2) continue;
       const w = rng.range(9, 16);
       const d = rng.range(9, 16);
@@ -275,15 +288,11 @@ export function buildCity(quality: QualityId): CityRefs {
   // ---------------------------------------------------------------- trees, lamps, flower beds
   const trees = new TreeBuilder();
   const lamps: Array<[number, number, number]> = [];
-  const landmarkClear = (s: number, side: number) =>
-    LANDMARKS.some((l) => l.side === side && Math.abs(ROUTE.delta(s, l.s)) < l.width / 2 + 3);
   for (let s = 4; s < ROUTE.length; s += 15) {
     for (const side of [-1, 1]) {
       if (ROUTE.cornerDistance(s) < 6) continue;
-      if (!landmarkClear(s, side)) {
-        const p = ROUTE.worldAt(s + rng.range(-1.5, 1.5), side * 9.0);
-        trees.add(rng, p.x, p.z, 1);
-      }
+      const p = ROUTE.worldAt(s + rng.range(-1.5, 1.5), side * 9.0);
+      trees.add(rng, p.x, p.z, 1);
     }
   }
   for (let s = 10; s < ROUTE.length; s += 24) {
@@ -294,19 +303,20 @@ export function buildCity(quality: QualityId): CityRefs {
     }
   }
   // loop interior: lawns, tree clusters and footpaths
-  for (let i = 0; i < 520 * q.decorDensity; i++) {
-    const x = rng.range(LOOP.x0 + 50, LOOP.x1 - 50);
-    const z = rng.range(LOOP.z0 + 50, LOOP.z1 - 55);
+  for (let i = 0; i < 700 * q.decorDensity; i++) {
+    const x = rng.range(BOUNDS.x0, BOUNDS.x1);
+    const z = rng.range(BOUNDS.z0, BOUNDS.z1);
+    if (distToRoute(x, z) < 13) continue;
     const bb = { x0: x - 2, x1: x + 2, z0: z - 2, z1: z + 2 };
     if (blocked.some((b) => overlaps(b, bb)) || fillerAABBs.some((b) => overlaps(b, bb))) continue;
     trees.add(rng, x, z, rng.range(0.9, 1.5));
   }
   // trees around the distant blocks and behind the outer rows
   for (let i = 0; i < 900 * q.decorDensity; i++) {
-    const x = rng.range(-560, 820);
-    const z = rng.range(-1060, 520);
+    const x = rng.range(BOUNDS.x0 - 520, BOUNDS.x1 + 520);
+    const z = rng.range(BOUNDS.z0 - 620, BOUNDS.z1 + 420);
     const bb = { x0: x - 2, x1: x + 2, z0: z - 2, z1: z + 2 };
-    if (x > LOOP.x0 - 12 && x < LOOP.x1 + 12 && z > LOOP.z0 - 12 && z < LOOP.z1 + 12) continue;
+    if (x > BOUNDS.x0 && x < BOUNDS.x1 && z > BOUNDS.z0 && z < BOUNDS.z1) continue;
     if (blocked.some((b) => overlaps(b, bb)) || fillerAABBs.some((b) => overlaps(b, bb))) continue;
     trees.add(rng, x, z, rng.range(0.9, 1.6));
   }
@@ -314,41 +324,47 @@ export function buildCity(quality: QualityId): CityRefs {
   root.add(treeMeshes.group);
   root.add(buildLamps(lamps));
 
-  // flower beds along the sidewalks near landmarks and in garden zones
+  // flower beds flanking each landmark forecourt, plus a garden walk on the way to the church
   let variant = 0;
   for (const l of LANDMARKS) {
-    for (const off of [-l.width / 2 - 4, l.width / 2 + 4]) {
-      const p = ROUTE.worldAt(l.s + off, l.side * 10.6);
+    const c = ROUTE.corners[l.corner];
+    const sides = l.id === 'house_turquoise' ? [-1] : l.id === 'house_pink' ? [1] : [-1, 1];
+    for (const side of sides) {
+      const p = aheadOfCorner(c, JUNCTION_CLEAR - 1.5, l.lateral + side * (l.width / 2 + 3.5));
       const fb = flowerBed(4, 1.4, variant++, 0, 0);
       fb.position.set(p.x, 0, p.z);
       fb.rotation.y = -p.heading;
       root.add(fb);
     }
   }
-  // Trinity Garden Walk: extra beds
-  for (let s = 270; s < 360; s += 14) {
-    const p = ROUTE.worldAt(s, 10.8);
-    const fb = flowerBed(3, 1.2, variant++, 0, 0);
-    fb.position.set(p.x, 0, p.z);
-    fb.rotation.y = -p.heading;
-    root.add(fb);
+  const church = LANDMARKS.find((l) => l.id === 'church')!;
+  for (let s = church.s - 110; s < church.s - 30; s += 14) {
+    for (const side of [-1, 1]) {
+      const p = ROUTE.worldAt(s, side * 10.8);
+      const fb = flowerBed(3, 1.2, variant++, 0, 0);
+      fb.position.set(p.x, 0, p.z);
+      fb.rotation.y = -p.heading;
+      root.add(fb);
+    }
   }
 
   // parked cars on side streets (outside the course)
   const carColors = [0x3a6ea5, 0xe8e4da, 0x9c2f2f, 0x4b7f52, 0xd9a441, 0x6b5b95];
-  const parked: Array<[number, number, number]> = [
-    [-30, -126.5, Math.PI / 2],
-    [-55, -126.5, Math.PI / 2],
-    [-80, -133.5, -Math.PI / 2],
-    [290, -146.5, Math.PI / 2],
-    [330, -153.5, -Math.PI / 2],
-    [3.5, 110, 0],
-    [-3.5, 150, Math.PI],
-    [3.5, -400, 0],
-    [263.5, -420, 0],
-    [-60, 63.5, Math.PI / 2],
-    [320, 56.5, -Math.PI / 2],
-  ];
+  // parked along the side streets, well away from the course
+  const parked: Array<[number, number, number]> = [];
+  for (const [x0, z0, x1, z1] of decoStreets) {
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const ux = (x1 - x0) / len;
+    const uz = (z1 - z0) / len;
+    for (const t of [32, 58]) {
+      if (t > len - 20) continue;
+      const side = t === 32 ? 1 : -1;
+      // right-hand vector of the street direction
+      const rx = -uz;
+      const rz = ux;
+      parked.push([x0 + ux * t + rx * 3.6 * side, z0 + uz * t + rz * 3.6 * side, Math.atan2(ux, uz) + (side < 0 ? Math.PI : 0)]);
+    }
+  }
   parked.forEach(([x, z, r], i) => {
     const c = buildCar(carColors[i % carColors.length]);
     c.position.set(x, 0, z);
@@ -695,10 +711,9 @@ function welcomeArch(): THREE.Group {
 
 function imaginationPark(): { group: THREE.Group; aabb: AABB } {
   const g = new THREE.Group();
-  const s = ADDITIONS.parkS;
-  const p = ROUTE.worldAt(s, 34);
+  const p = aheadOfCorner(ROUTE.corners[ADDITIONS.parkCorner], JUNCTION_CLEAR + 24);
   g.position.set(p.x, 0, p.z);
-  g.rotation.y = Math.atan2(-Math.cos(p.heading), -Math.sin(p.heading));
+  g.rotation.y = -p.heading;
   // paved circle and paths
   const pave = std(0xe5d8c2, { rough: 1 });
   const disc = new THREE.Mesh(new THREE.CircleGeometry(14, 40), pave);
@@ -768,9 +783,9 @@ function imaginationPark(): { group: THREE.Group; aabb: AABB } {
 
 function celebrationPlaza(): { group: THREE.Group; aabb: AABB } {
   const g = new THREE.Group();
-  const p = ROUTE.worldAt(ADDITIONS.plazaS, 24);
+  const p = aheadOfCorner(ROUTE.corners[ADDITIONS.plazaCorner], JUNCTION_CLEAR + 11);
   g.position.set(p.x, 0, p.z);
-  g.rotation.y = Math.atan2(-Math.cos(p.heading), -Math.sin(p.heading));
+  g.rotation.y = -p.heading;
   const pave = std(0xeadfcb, { rough: 1 });
   const d = new THREE.Mesh(new THREE.CircleGeometry(10, 32), pave);
   d.rotation.x = -Math.PI / 2;
@@ -815,7 +830,11 @@ function buildPeople(rng: Rng): { group: THREE.Group; set: PeopleSet } {
   const g = new THREE.Group();
   g.name = 'people';
   const spots: Array<{ x: number; z: number; yaw: number }> = [];
-  const anchors = [...LANDMARKS.map((l) => ({ s: l.s, side: l.side })), { s: ADDITIONS.parkS, side: 1 }, { s: ADDITIONS.plazaS, side: 1 }, { s: 60, side: 1 }, { s: 180, side: 1 }, { s: 450, side: 1 }, { s: 960, side: -1 }];
+  // neighbors line the last stretch before each landmark (both sides) and a few other spots
+  const anchors: Array<{ s: number; side: number }> = [];
+  for (const l of LANDMARKS) if (l.id !== 'house_pink') anchors.push({ s: l.s - 24, side: 1 }, { s: l.s - 24, side: -1 });
+  for (const ci of [ADDITIONS.parkCorner, ADDITIONS.plazaCorner]) anchors.push({ s: ROUTE.corners[ci].s0 - 24, side: 1 });
+  anchors.push({ s: 60, side: 1 }, { s: 60, side: -1 });
   for (const a of anchors) {
     const n = rng.int(2, 4);
     for (let i = 0; i < n; i++) {

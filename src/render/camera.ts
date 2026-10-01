@@ -19,7 +19,7 @@ export interface CamContext {
 }
 
 /** Aerial overview echoing the handmade model's layout: looking north up the central avenue. */
-export const AERIAL = { pos: new THREE.Vector3(100, 165, 205), look: new THREE.Vector3(100, 0, -215) };
+export const AERIAL = { pos: new THREE.Vector3(220, 230, 360), look: new THREE.Vector3(220, 0, -170) };
 
 export class CameraDirector {
   mode: CamMode = 'aerial';

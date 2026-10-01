@@ -3,7 +3,7 @@
 
 import { CONTROLS, POWERUPS, type ModeConfig } from '../config';
 import { Rng } from '../core/rng';
-import { LANDMARKS, LANDMARK_VIEW_HALF, ADDITIONS } from '../world/landmarks';
+import { ADDITIONS, inLandmarkZone } from '../world/landmarks';
 import { ROUTE } from '../world/route';
 import { PATTERNS, type Pattern } from './patterns';
 import type { Obstacle, Pickup, PowerupKind, Row } from './types';
@@ -74,7 +74,7 @@ export class RouteGenerator {
         if (s >= c.s0 + off - CORNER_MARGIN_BEFORE && s <= c.s1 + off + CORNER_MARGIN_AFTER) return true;
       }
     }
-    for (const l of LANDMARKS) if (Math.abs(ROUTE.delta(s, l.s)) < LANDMARK_VIEW_HALF) return true;
+    if (inLandmarkZone(s)) return true;
     if (Math.abs(ROUTE.delta(s, ADDITIONS.welcomeArchS)) < 8) return true;
     return false;
   }
@@ -235,11 +235,8 @@ export class RouteGenerator {
   }
 
   /** A glide needs a long corner-free stretch so the landing is never surprising. */
-  glideFits(d: number): boolean {
-    const dist = (POWERUPS.glide.duration + POWERUPS.glide.landing) * this.mode.maxSpeed * POWERUPS.rainbow.speedMul + 20;
-    for (let x = d; x <= d + dist; x += 4) {
-      if (ROUTE.cornerDistance(ROUTE.wrap(x)) < 6) return false;
-    }
+  glideFits(_d: number): boolean {
+    // The flight and landing span is cleared and reserved when the glide is picked up, and corners are safe to fly.
     return true;
   }
 

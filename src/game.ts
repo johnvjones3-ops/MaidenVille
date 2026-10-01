@@ -958,14 +958,8 @@ export class Game {
     };
   }
 
-  /** Gentle look toward a landmark inside its hazard-free viewing zone (never while hazards are near). */
+  /** Landmarks now stand straight ahead at the end of each street, so the camera never needs to turn aside. */
   private peekAmount(): number {
-    const sim = this.sim;
-    if (!sim || this.save.data.settings.reducedMotion) return 0;
-    for (const l of LANDMARKS) {
-      const d = ROUTE.delta(sim.s, l.s);
-      if (d > -4 && d < 16) return l.side * Math.sin(((d + 4) / 20) * Math.PI) * 0.9;
-    }
     return 0;
   }
 
@@ -977,13 +971,10 @@ export class Game {
   }
 
   // ------------------------------------------------------------------ debug helpers (used by automated screenshots)
-  /** Frame a landmark from across the street (for screenshots). */
-  debugView(id: LandmarkId, dist = 26, height = 6) {
-    const l = LANDMARK_BY_ID[id];
-    this.debugJump(l.s);
-    const w = landmarkWorld(l);
-    const p = ROUTE.worldAt(l.s, -l.side * (dist - l.setback - l.depth / 2));
-    this.debugCam = [p.x - this.maddyPos.x, height, p.z - this.maddyPos.z, w.x - this.maddyPos.x, height * 0.5, w.z - this.maddyPos.z];
+  /** Put Maddy on the approach to a landmark (for screenshots). */
+  debugView(id: LandmarkId, dist = 40) {
+    this.debugCam = null;
+    this.debugJump(ROUTE.wrap(LANDMARK_BY_ID[id].s - dist));
   }
 
   debugJump(s: number) {

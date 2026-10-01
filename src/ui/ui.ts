@@ -6,7 +6,7 @@ import type { SaveData, Settings } from '../save/save';
 import { WORD } from '../sim/letterQuest';
 import type { MissionDef } from '../sim/missions';
 import type { PowerupKind } from '../sim/types';
-import { LANDMARKS, LANDMARK_BY_ID, type LandmarkId } from '../world/landmarks';
+import { LANDMARKS, LANDMARK_BY_ID, landmarkWorld, type LandmarkId } from '../world/landmarks';
 import { ROUTE } from '../world/route';
 import { ICON, type IconName } from './icons';
 import { landmarkThumb } from './thumbs';
@@ -623,9 +623,9 @@ export class UI {
   // ------------------------------------------------------------------ explore map & landmark card
   showMap(o: { currentS: number; stamps: string[]; onTravel: (id: LandmarkId) => void; onClose: () => void }) {
     // simple top-down map of the loop with landmark buttons
-    const W = 320;
-    const H = 400;
-    const toMap = (x: number, z: number) => [((x + 80) / 420) * W, ((z + 400) / 520) * H];
+    const W = 340;
+    const H = 340;
+    const toMap = (x: number, z: number) => [((x + 70) / 590) * W, ((z + 370) / 590) * H];
     const pts: string[] = [];
     for (let s = 0; s < ROUTE.length; s += 8) {
       const p = ROUTE.pose(s);
@@ -642,8 +642,8 @@ export class UI {
     </svg>`;
     const host = el('div', { class: 'map-host', html: svgStr });
     for (const l of LANDMARKS) {
-      const w = ROUTE.worldAt(l.s, l.side * (l.setback + 4));
-      const nudge: Partial<Record<LandmarkId, number>> = { house_turquoise: 14, house_pink: -14, emergency: 6, store: 10 };
+      const w = landmarkWorld(l);
+      const nudge: Partial<Record<LandmarkId, number>> = { house_turquoise: -12, house_pink: 12 };
       const [mx, my0] = toMap(w.x, w.z);
       const my = my0 + (nudge[l.id] ?? 0);
       host.append(
