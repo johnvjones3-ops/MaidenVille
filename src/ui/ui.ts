@@ -252,7 +252,7 @@ export class UI {
       icon('pause'),
     );
     this.hud.append(
-      el('div', { class: 'hud-left' }, el('div', { class: 'chip stars', 'aria-label': 'Stars' }, icon('star'), r.stars), r.scoreBox, r.power),
+      el('div', { class: 'hud-left' }, (r.starBox = el('div', { class: 'chip stars', 'aria-label': 'Stars' }, icon('star'), r.stars)), r.scoreBox, r.power),
       el('div', { class: 'hud-center' }, r.hearts, r.letters, r.mission),
       el('div', { class: 'hud-right' }, r.pause),
     );
@@ -275,6 +275,7 @@ export class UI {
     this.set('stars', String(h.stars), () => (r.stars.textContent = String(h.stars)));
     this.set('score', `${h.showScore}:${Math.floor(h.score)}`, () => {
       r.scoreBox.classList.toggle('hidden', !h.showScore);
+      r.starBox.classList.toggle('hidden', !h.showScore);
       r.score.textContent = Math.floor(h.score).toLocaleString();
     });
     this.set('hearts', `${h.showHearts}:${h.hearts}/${h.maxHearts}:${h.shield}:${h.invuln}`, () => {
@@ -642,7 +643,9 @@ export class UI {
     const host = el('div', { class: 'map-host', html: svgStr });
     for (const l of LANDMARKS) {
       const w = ROUTE.worldAt(l.s, l.side * (l.setback + 4));
-      const [mx, my] = toMap(w.x, w.z);
+      const nudge: Partial<Record<LandmarkId, number>> = { house_turquoise: 14, house_pink: -14, emergency: 6, store: 10 };
+      const [mx, my0] = toMap(w.x, w.z);
+      const my = my0 + (nudge[l.id] ?? 0);
       host.append(
         el(
           'button',

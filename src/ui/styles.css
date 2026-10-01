@@ -270,8 +270,12 @@ select:focus-visible {
 }
 .intro {
   justify-content: flex-start;
-  padding-top: calc(10vh + var(--safe-t));
-  background: linear-gradient(180deg, rgba(255, 250, 240, 0.35), transparent 40%);
+  gap: 4px;
+  padding-top: calc(10px + var(--safe-t));
+  background: linear-gradient(180deg, rgba(255, 250, 240, 0.3), transparent 30%);
+}
+.intro .wm {
+  font-size: clamp(1.8rem, 5vw, 3rem);
 }
 .intro .skip {
   position: absolute;

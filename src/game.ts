@@ -267,6 +267,7 @@ export class Game {
     this.ui.showTouch(this.save.data.settings.touchButtons);
     this.ui.showExploreBar(null);
     this.syncMaddyToSim(0);
+    this.updateHud();
     const ctx = this.camCtx();
     const reduced = this.save.data.settings.reducedMotion;
     this.state = 'transition';
@@ -976,6 +977,15 @@ export class Game {
   }
 
   // ------------------------------------------------------------------ debug helpers (used by automated screenshots)
+  /** Frame a landmark from across the street (for screenshots). */
+  debugView(id: LandmarkId, dist = 26, height = 6) {
+    const l = LANDMARK_BY_ID[id];
+    this.debugJump(l.s);
+    const w = landmarkWorld(l);
+    const p = ROUTE.worldAt(l.s, -l.side * (dist - l.setback - l.depth / 2));
+    this.debugCam = [p.x - this.maddyPos.x, height, p.z - this.maddyPos.z, w.x - this.maddyPos.x, height * 0.5, w.z - this.maddyPos.z];
+  }
+
   debugJump(s: number) {
     if (!this.sim) return;
     this.sim.travelTo(s);

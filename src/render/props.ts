@@ -2,7 +2,9 @@
 
 import * as THREE from 'three';
 import { PALETTE } from '../config';
-import { box, basic, cyl, glassMat, sphere, std } from './kit';
+import { box, basic, cyl, sphere, std } from './kit';
+
+const glassMat = () => std(0x6f93ad, { rough: 0.15, metal: 0.4, emissive: 0x1d2a38, ei: 0.4 });
 import { painted, signTexture } from './textures';
 import type { ObstacleKind, MissionItemKind, PowerupKind } from '../sim/types';
 
