@@ -2,14 +2,15 @@
   "name": "maidenville-runner",
   "private": true,
   "version": "1.0.0",
-  "description": "MaidenVille Runner! — a child-friendly 3D endless runner starring Maddy Maiden.",
+  "description": "MaidenVille Runner! \u2014 a child-friendly 3D endless runner starring Maddy Maiden.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:single": "npm run build && node scripts/single-file.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

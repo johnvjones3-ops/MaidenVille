@@ -132,3 +132,7 @@ These checks were actually run in this environment:
 - Neighbors are simple stylized figures. The trees and filler buildings are low-poly.
 - The city geometry is built once at load time for the chosen quality. Changing quality later adjusts the pixel ratio, shadows, fog and particles; reload to change how many trees and buildings are drawn.
 - Sound was generated but could not be listened to here. The checks only confirmed that no audio errors occurred.
+
+## Published build
+
+`npm run build:single` produces `dist/maidenville-runner.html`, a single self-contained page (all JS/CSS inlined, no network requests). That file is what was published as the claude.ai artifact.
