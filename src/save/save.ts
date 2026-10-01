@@ -162,9 +162,8 @@ export class SaveManager {
     if (!text) return defaultSave();
     try {
       const parsed = JSON.parse(text);
-      const clean = sanitize(parsed);
-      if (JSON.stringify(clean) !== JSON.stringify(parsed)) this.recovered = true;
-      return clean;
+      if (!parsed || typeof parsed !== 'object') this.recovered = true;
+      return sanitize(parsed);
     } catch {
       this.recovered = true;
       try {

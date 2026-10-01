@@ -44,8 +44,8 @@ export const PALETTE = {
 
 /** Maddy's look, derived from the reference photo. Edit here to refine the likeness. */
 export const MADDY_LOOK = {
-  skin: 0x7b4a2d, // medium-to-deep brown
-  skinShade: 0x5e3720,
+  skin: 0x8a5232, // medium-to-deep brown
+  skinShade: 0x6a3e24,
   hair: 0x1c1310,
   hairHighlight: 0x3a2a22,
   eyes: 0x1a0f0a,
