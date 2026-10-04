@@ -124,7 +124,7 @@ export class UI {
               <span class="num">${i + 1}</span>
               <span class="lname">${esc(l.name)}</span>
               <span class="lsub">${l.unlocked ? esc(l.subtitle) : 'Locked: clear the previous level'}</span>
-              <span class="lmeta">${l.unlocked ? `${'<img alt="" src="' + iconURL('emblem', 22) + '">'.repeat(l.emblems)}${'<img alt="" class="ghost" src="' + iconURL('emblemGhost', 22) + '">'.repeat(3 - l.emblems)} ${l.done ? '✔ ' : ''}${esc(l.best)}` : '🔒'}</span>
+              <span class="lmeta">${l.unlocked ? `${`<img alt="" src="${iconURL('emblem', 22)}">`.repeat(l.emblems)}${`<img alt="" class="ghost" src="${iconURL('emblemGhost', 22)}">`.repeat(3 - l.emblems)} ${l.done ? '✔ ' : ''}${esc(l.best)}` : '🔒'}</span>
             </button>`,
           )
           .join('')}</div>
@@ -262,11 +262,11 @@ export class UI {
   results(r: { title: string; rows: [string, string][]; emblems: boolean[]; next: string | null; newBest: boolean }, a: Actions) {
     this.render(
       'results',
-      `<div class="panel"><h2>${esc(r.title)}</h2>
+      `<div class="panel wide results"><h2>${esc(r.title)}</h2>
         <div class="slots">${r.emblems.map((g) => `<img alt="${g ? 'found' : 'missing'}" class="${g ? '' : 'ghost'}" src="${iconURL(g ? 'emblem' : 'emblemGhost', 48)}">`).join('')}</div>
         <table class="stats">${r.rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>
         ${r.newBest ? '<p class="best">New personal best!</p>' : ''}
-        <div class="menu">
+        <div class="row">
           ${r.next ? `<button class="btn primary" data-act="next">${esc(r.next)}</button>` : ''}
           <button class="btn ${r.next ? '' : 'primary'}" data-act="replay">Replay level</button>
           <button class="btn" data-act="quit">Title screen</button>
@@ -279,10 +279,10 @@ export class UI {
   victory(rows: [string, string][], a: Actions) {
     this.render(
       'victory',
-      `<div class="panel"><div class="bigv"><img alt="" src="${iconURL('emblem', 96)}"></div><h2>The Fieldhouse is Packed!</h2>
+      `<div class="panel wide results"><div class="bigv"><img alt="" src="${iconURL('emblem', 96)}"></div><h2>The Fieldhouse is Packed!</h2>
         <p class="sub">You beat the Rebounder 3000 and finished the campaign. ¡Arriba Vaqueros!</p>
         <table class="stats">${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>
-        <div class="menu"><button class="btn primary" data-act="title">Title screen</button><button class="btn" data-act="levels">Level Select</button></div></div>`,
+        <div class="row"><button class="btn primary" data-act="title">Title screen</button><button class="btn" data-act="levels">Level Select</button></div></div>`,
       a,
       null,
     );

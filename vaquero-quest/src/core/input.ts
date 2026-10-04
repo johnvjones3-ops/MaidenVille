@@ -75,7 +75,8 @@ export class Input {
   }
 
   private onKey(e: KeyboardEvent, down: boolean) {
-    if (!this.active) return;
+    // Keys already handled by a menu (which may have just resumed play) are not game input.
+    if (!this.active || (down && e.defaultPrevented)) return;
     if (down && (e.code === 'Escape' || e.code === 'KeyP')) {
       e.preventDefault();
       if (!e.repeat) this.onPause?.();

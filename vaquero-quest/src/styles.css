@@ -709,3 +709,50 @@ kbd {
     height: 32px;
   }
 }
+
+/* compact layouts for short landscape screens */
+.results table.stats tbody {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 18px;
+}
+.results table.stats tr {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 2px dashed #e2d4c0;
+}
+.results table.stats td {
+  border: 0;
+  padding: 5px 2px;
+}
+.results .slots img {
+  width: 40px;
+  height: 40px;
+}
+.results .bigv img {
+  width: 64px;
+  height: 64px;
+}
+.panel.wide .items {
+  grid-template-columns: repeat(3, 1fr);
+}
+.item {
+  padding: 5px 8px;
+}
+.item span {
+  font-size: 12.5px;
+}
+@media (max-width: 700px) {
+  .panel.wide .items,
+  .results table.stats tbody {
+    grid-template-columns: 1fr;
+  }
+}
+@media (orientation: portrait) {
+  #ui {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+}
