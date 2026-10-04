@@ -1,0 +1,20 @@
+{
+  "name": "utrgv-vaquero-quest",
+  "private": true,
+  "version": "1.0.0",
+  "description": "UTRGV Vaquero Quest - a side-scrolling platformer across the UTRGV Fieldhouse campus.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build:single": "npm run build && node scripts/single-file.mjs"
+  },
+  "devDependencies": {
+    "typescript": "~5.9",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.7"
+  }
+}
