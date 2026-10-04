@@ -3,7 +3,7 @@ import type { Backdrop } from '../levels/types';
 import { PK } from '../game/particles';
 import { T, isOneWay, isSolid } from '../game/tiles';
 import type { World } from '../game/world';
-import { drawBoss, drawEnemy, drawPlayer } from './actors';
+import { drawBoss, drawEnemy, drawHero, drawPlayer } from './actors';
 import { C, ICONS, IconCache, drawBasketball, drawLantern, drawVHand, makeCanvas, rr, starPath } from './art';
 import { Backdrops } from './backdrop';
 import {
@@ -98,6 +98,13 @@ export class Renderer {
     const ctx = this.ctx;
     ctx.setTransform(this.pixelScale, 0, 0, this.pixelScale, 0, 0);
     this.backdrops.drawTitle(ctx, time);
+    // The hero, front and centre-left, waving the V.
+    const anim = Math.floor(time / 3) % 2 === 0 ? 'idle' : 'victory';
+    ctx.save();
+    ctx.translate(100, 500);
+    ctx.scale(2.6, 2.6);
+    drawHero(ctx, { big: true, anim, facing: 1, landT: 0, starT: 0, stride: 0, vx: 0 }, 0, 0, time);
+    ctx.restore();
   }
 
   drawWorld(w: World, alpha: number, time: number, realDt: number) {
@@ -191,7 +198,7 @@ export class Renderer {
           this.icon(ctx, 'star', 0, 0, 36);
         } else if (it.kind === 'lantern') {
           ctx.translate(x, y);
-          drawLantern(ctx, 26, 1, time);
+          drawLantern(ctx, 34, 1, time);
         } else {
           const size = it.kind === 'hat' ? 42 : it.kind === 'emblem' ? 40 : 38;
           this.icon(ctx, it.kind, x, y, size);
@@ -479,7 +486,9 @@ export class Renderer {
     for (let i = 0; i < 3; i++) {
       const got = w.session.rare.has(ids[i]);
       const x = VIEW_W / 2 - 46 + i * 46;
+      if (!got) ctx.globalAlpha = 0.2;
       this.icon(ctx, got ? 'emblem' : 'emblemGhost', x, 38, 34);
+      ctx.globalAlpha = 1;
     }
 
     // Right card: form, timers, lasso

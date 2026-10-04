@@ -1,3 +1,6 @@
+import { drawSprite } from './sprites';
+
+// Sprites from the supplied icon sheet are used when loaded; these vector redraws are the fallback.
 // Vector redraws of the approved UTRGV icon-sheet objects (upper portion only).
 // Every function draws centred on (0, 0) at a nominal size `s` (≈ the icon's width in px).
 // No blue panels/frames from the sheet's lower portion are reproduced anywhere.
@@ -50,6 +53,14 @@ export function starPath(ctx: Ctx, cx: number, cy: number, r: number, inner = 0.
 
 // ---------------------------------------------------------------------------
 export function drawBasketball(ctx: Ctx, x: number, y: number, r: number, rot = 0) {
+  if (r > 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    const ok = drawSprite(ctx, 'ball', r * 2.1, r * 2.1);
+    ctx.restore();
+    if (ok) return;
+  }
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rot);
@@ -92,6 +103,7 @@ export function drawBasketball(ctx: Ctx, x: number, y: number, r: number, rot = 
 
 /** Two-finger "V" hand sign. variant 1: orange hand, gray cuff. variant 2: gray hand, orange fingertips. */
 export function drawVHand(ctx: Ctx, s: number, variant: 1 | 2 = 1) {
+  if (drawSprite(ctx, variant === 1 ? 'hand' : 'hand2', s * 1.15, s * 1.15)) return;
   const u = s / 40;
   const body = variant === 1 ? C.orange : '#B8B8BE';
   const shade = variant === 1 ? C.orangeDark : '#86868C';
@@ -164,6 +176,11 @@ export function drawVHand(ctx: Ctx, s: number, variant: 1 | 2 = 1) {
 }
 
 export function drawPalmPot(ctx: Ctx, s: number, sway = 0) {
+  ctx.save();
+  ctx.rotate(sway * 0.01);
+  const ok = drawSprite(ctx, 'palmpot', s * 1.5, s * 1.45, 0, s * 0.48 - s * 0.725);
+  ctx.restore();
+  if (ok) return;
   const u = s / 40;
   ctx.save();
   ctx.scale(u, u);
@@ -243,6 +260,7 @@ export function drawPalmPot(ctx: Ctx, s: number, sway = 0) {
 
 /** Wooden crate with metal corner brackets and orange V marks; optional small star. */
 export function drawCrate(ctx: Ctx, s: number, opts: { star?: boolean; empty?: boolean; glow?: number } = {}) {
+  if (drawSprite(ctx, 'crate', s * 1.08, s * 1.08, 0, 0, opts.empty ? 'spent' : undefined)) return;
   const h = s / 2;
   const empty = !!opts.empty;
   ctx.save();
@@ -335,6 +353,15 @@ export function drawCrate(ctx: Ctx, s: number, opts: { star?: boolean; empty?: b
 }
 
 export function drawLantern(ctx: Ctx, s: number, glow = 1, t = 0) {
+  if (glow > 0) {
+    const r = s * (0.95 + Math.sin(t * 4) * 0.06);
+    const g0 = ctx.createRadialGradient(0, 0, 2, 0, 0, r);
+    g0.addColorStop(0, `rgba(255,166,26,${0.5 * Math.min(1, glow)})`);
+    g0.addColorStop(1, 'rgba(255,166,26,0)');
+    ctx.fillStyle = g0;
+    ctx.fillRect(-r, -r, r * 2, r * 2);
+  }
+  if (drawSprite(ctx, 'lantern', s * 1.3, s * 1.3, 0, -s * 0.08)) return;
   const u = s / 30;
   ctx.save();
   ctx.scale(u, u);
@@ -391,6 +418,7 @@ export function drawLantern(ctx: Ctx, s: number, glow = 1, t = 0) {
 }
 
 export function drawStool(ctx: Ctx, s: number) {
+  if (drawSprite(ctx, 'stool', s * 1.0, s * 1.0, 0, s * 0.13)) return;
   const u = s / 40;
   ctx.save();
   ctx.scale(u, u);
@@ -433,6 +461,7 @@ export function drawStool(ctx: Ctx, s: number) {
 
 /** Black cowboy hat with orange band; `star` adds the green star on the band. */
 export function drawHat(ctx: Ctx, s: number, star = true) {
+  if (drawSprite(ctx, star ? 'hat' : 'hatPlain', s * 1.05, s * 0.85, 0, -s * 0.03)) return;
   const u = s / 42;
   ctx.save();
   ctx.scale(u, u);
@@ -490,6 +519,7 @@ export function drawHat(ctx: Ctx, s: number, star = true) {
 }
 
 export function drawStar(ctx: Ctx, r: number, color = C.green, light = C.greenLight) {
+  if (color === C.green && drawSprite(ctx, 'star', r * 2.2, r * 2.2)) return;
   starPath(ctx, 0, 0, r, 0.48);
   ctx.fillStyle = color;
   ctx.fill();
@@ -506,6 +536,9 @@ export function drawStar(ctx: Ctx, r: number, color = C.green, light = C.greenLi
 
 /** Orange V emblem with a dark star and dark outline. */
 export function drawVEmblem(ctx: Ctx, s: number, ghost = false) {
+  if (drawSprite(ctx, 'emblem', s, s, 0, 0, ghost ? 'ghost' : undefined)) {
+    return;
+  }
   const u = s / 40;
   ctx.save();
   ctx.scale(u, u);
@@ -550,6 +583,7 @@ export function drawVEmblem(ctx: Ctx, s: number, ghost = false) {
 }
 
 export function drawBook(ctx: Ctx, s: number) {
+  if (drawSprite(ctx, 'book', s * 1.05, s * 1.05)) return;
   const u = s / 40;
   ctx.save();
   ctx.scale(u, u);
@@ -596,6 +630,7 @@ export function drawBook(ctx: Ctx, s: number) {
 }
 
 export function drawLasso(ctx: Ctx, s: number) {
+  if (drawSprite(ctx, 'lasso', s * 1.05, s * 1.05)) return;
   const u = s / 40;
   ctx.save();
   ctx.scale(u, u);

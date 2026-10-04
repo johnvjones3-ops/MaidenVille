@@ -2,7 +2,7 @@
 
 A side-scrolling platformer for the browser. Run, jump, hit V crates from below, stomp Practice Bots, collect basketballs and UTRGV items, find secrets, and finish at the UTRGV Fieldhouse. The game has three hand-built levels, a secret book room and a boss fight against the Rebounder 3000.
 
-All art is drawn with canvas vector code, and all music and sound are synthesized with Web Audio. There are no image or audio files, no network calls, no accounts and no API keys. Progress is saved in `localStorage`.
+The UTRGV item icons are cut from the supplied icon sheet. The hero is a cartoon styled after the supplied character photo. Everything else is drawn with canvas vector code, and all music and sound are synthesized with Web Audio. The icons are bundled into the build, so there are no external image or audio files, no network calls, no accounts and no API keys. Progress is saved in `localStorage`.
 
 ## Run it
 
@@ -54,6 +54,8 @@ I also drove every menu flow, touch multi-touch and the single-file build in hea
 
 ## Known limitations
 
-- The reference photo and icon sheet were not available while this was built. The Fieldhouse and every UTRGV object (V hands, basketball, crate, lantern, stool, both hats, star, V emblem, book, lasso, potted palm) are redrawn from the written descriptions. None of the excluded blue panels are used.
+- Icons: `scripts/extract-icons.py <sheet>` cuts the 13 approved icons out of the upper 4×4 grid of the icon sheet and writes them to `src/assets/icons/*.webp` with transparent edges (no navy halo). The blue panels in the lower portion are never read. Vector redraws in `src/render/art.ts` remain as a fallback.
+- Hero: drawn procedurally after the character photo (black hat with orange band and V patch, short dark hair and beard, orange paisley bandana, rolled white sleeves, charcoal vest with orange piping, black/orange bracers, silver buckle, perforated chaps with fringe). Rookie form keeps the plain hat, shirt and bandana; the hat power-up adds the vest, bracers, chaps and V-patch hat. The photo itself is not included in the repository or the build.
+- The Fieldhouse photo was not supplied, so the building is redrawn from the written description.
 - The arena interior is an artistic interpretation, not the real building.
 - Playtesting was automated (unit tests, the reachability validator and scripted browser runs). Feel tuning would benefit from human playtesting on real phones.

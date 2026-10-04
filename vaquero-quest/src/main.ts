@@ -1,6 +1,8 @@
 import './styles.css';
 import { Game } from './game';
+import { loadSprites } from './render/sprites';
 
+await loadSprites();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const game = new Game(canvas, document.getElementById('ui')!, document.getElementById('touch')!, document.getElementById('banner')!);
 
