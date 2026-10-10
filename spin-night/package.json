@@ -1,0 +1,22 @@
+{
+  "name": "spin-night",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Spin Night: John & Lex - a two-player home adaptation of the classic TV wheel-and-puzzle game show.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build:single": "npm run build && node scripts/single-file.mjs",
+    "playtest": "node scripts/playtest.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1",
+    "typescript": "~5.9",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.7"
+  }
+}
