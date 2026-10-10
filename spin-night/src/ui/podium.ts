@@ -3,14 +3,14 @@
 import { NAMES, mainTotal } from '../engine/game';
 import type { GameState, Pid } from '../engine/types';
 import { formatMoney } from '../engine/wheels';
-import { avatarSVG, DEFAULT_AVATARS, type AvatarConfig, type Mood } from './avatar';
+import { avatarSVG, DEFAULT_AVATARS, normalizeAvatar, type AvatarConfig, type Mood } from './avatar';
 import { h, icon } from './dom';
 
 let avatars: [AvatarConfig, AvatarConfig] = structuredClone(DEFAULT_AVATARS);
 const moods: Mood[] = ['neutral', 'neutral'];
 
 export function setAvatars(a: [AvatarConfig, AvatarConfig]) {
-  avatars = a;
+  avatars = [normalizeAvatar(0, a[0]), normalizeAvatar(1, a[1])];
 }
 
 export function getAvatars() {

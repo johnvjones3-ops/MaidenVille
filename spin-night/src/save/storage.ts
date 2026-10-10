@@ -26,7 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceMotion: false,
 };
 
-type Key = 'settings' | 'history' | 'save' | 'avatars' | 'screen';
+type Key = 'settings' | 'history' | 'save' | 'avatars2' | 'screen';
 interface Wrapped<T> {
   updatedAt: number;
   data: T;
@@ -68,7 +68,7 @@ interface UserLike {
   id(): Promise<string | null>;
 }
 
-const CLOUD_KEYS: Key[] = ['settings', 'history', 'save', 'avatars'];
+const CLOUD_KEYS: Key[] = ['settings', 'history', 'save', 'avatars2'];
 
 class Cloud {
   private db: DbLike | null = null;
@@ -160,7 +160,7 @@ export class Store {
     const settings = { ...DEFAULT_SETTINGS, ...(readLocal<Settings>('settings')?.data ?? {}) };
     const history = readLocal<History>('history')?.data ?? { seen: {}, counter: 0 };
     const save = readLocal<GameState>('save');
-    const avatars = readLocal<[AvatarConfig, AvatarConfig]>('avatars')?.data ?? null;
+    const avatars = readLocal<[AvatarConfig, AvatarConfig]>('avatars2')?.data ?? null;
     const screen = readLocal<string>('screen')?.data ?? 'menu';
     return { settings, history, save: save?.data ?? null, avatars, screen };
   }
@@ -182,7 +182,7 @@ export class Store {
     this.put('save', g, 3000);
   }
   saveAvatars(a: [AvatarConfig, AvatarConfig]) {
-    this.put('avatars', a);
+    this.put('avatars2', a);
   }
   saveScreen(screen: 'menu' | 'game') {
     writeLocal('screen', { updatedAt: Date.now(), data: screen });
@@ -206,8 +206,8 @@ export class Store {
     const localSave = readLocal<GameState>('save');
     const rs = remote.save as Wrapped<GameState | null> | undefined;
     if (rs && (!localSave || rs.updatedAt > localSave.updatedAt)) out.save = rs.data;
-    const localAv = readLocal<[AvatarConfig, AvatarConfig]>('avatars');
-    const ra = remote.avatars as Wrapped<[AvatarConfig, AvatarConfig]> | undefined;
+    const localAv = readLocal<[AvatarConfig, AvatarConfig]>('avatars2');
+    const ra = remote.avatars2 as Wrapped<[AvatarConfig, AvatarConfig]> | undefined;
     if (ra?.data && (!localAv || ra.updatedAt > localAv.updatedAt)) out.avatars = ra.data;
     if (!readLocal('settings') && remote.settings?.data) out.settings = { ...DEFAULT_SETTINGS, ...(remote.settings.data as Settings) };
 
@@ -215,10 +215,10 @@ export class Store {
     if (out.history) this.saveHistory(out.history);
     else this.saveHistory(local.history);
     if (!rs && localSave) this.cloud.queue('save', JSON.stringify(localSave), 500);
-    if (!ra && localAv) this.cloud.queue('avatars', JSON.stringify(localAv), 500);
+    if (!ra && localAv) this.cloud.queue('avatars2', JSON.stringify(localAv), 500);
     if (!remote.settings) this.saveSettings(local.settings);
     if (out.save !== undefined) writeLocal('save', out.save ? { updatedAt: rs!.updatedAt, data: out.save } : null);
-    if (out.avatars) writeLocal('avatars', ra!);
+    if (out.avatars) writeLocal('avatars2', ra!);
     return out;
   }
 }

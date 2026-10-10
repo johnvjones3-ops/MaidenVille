@@ -6,6 +6,9 @@ import {
   FACIAL,
   HAIR_COLORS,
   HAIR_STYLES,
+  JAWS,
+  JEWELRY,
+  OUTFITS,
   SHIRT_COLORS,
   SKIN_TONES,
   avatarSVG,
@@ -211,7 +214,7 @@ export function openContestants(get: () => [AvatarConfig, AvatarConfig], set: (p
       wrap.append(list);
       return { wrap, list, key };
     };
-    const chips = <T extends string>(label: string, opts: { id: T; label: string }[], key: 'hair' | 'facial') => {
+    const chips = <T extends string>(label: string, opts: { id: T; label: string }[], key: 'hair' | 'facial' | 'outfit' | 'jewelry' | 'jaw') => {
       const wrap = h('div', { class: 'ed-row' }, h('div', { class: 'ed-label' }, label));
       const list = h('div', { class: 'chips' });
       for (const o of opts) {
@@ -226,11 +229,18 @@ export function openContestants(get: () => [AvatarConfig, AvatarConfig], set: (p
     const hair = chips('Hair', HAIR_STYLES, 'hair');
     const hairColor = swatches('Hair color', HAIR_COLORS, 'hairColor');
     const facial = chips('Facial hair', FACIAL, 'facial');
-    const shirt = swatches('Shirt', SHIRT_COLORS, 'shirt');
-    const glasses = h('button', { type: 'button', class: 'chip-btn' }, 'Glasses');
-    glasses.addEventListener('click', () => apply({ glasses: !get()[pid].glasses, mode: 'art' }));
-    const jaw = h('button', { type: 'button', class: 'chip-btn' }, 'Softer jaw');
-    jaw.addEventListener('click', () => apply({ jaw: get()[pid].jaw === 'soft' ? 'square' : 'soft', mode: 'art' }));
+    const jaw = chips('Face shape', JAWS, 'jaw');
+    const outfit = chips('Outfit', OUTFITS, 'outfit');
+    const shirt = swatches('Outfit color', SHIRT_COLORS, 'shirt');
+    const jewelry = chips('Necklace', JEWELRY, 'jewelry');
+    const flag = (label: string, key: 'glasses' | 'earrings' | 'lashes') => {
+      const b = h('button', { type: 'button', class: 'chip-btn', 'data-flag': key }, label);
+      b.addEventListener('click', () => apply({ [key]: !get()[pid][key], mode: 'art' }));
+      return b;
+    };
+    const glasses = flag('Glasses', 'glasses');
+    const earrings = flag('Hoop earrings', 'earrings');
+    const lashes = flag('Lashes and lip color', 'lashes');
 
     const file = h('input', { type: 'file', accept: 'image/*', class: 'visually-hidden', id: `photo-${pid}` }) as HTMLInputElement;
     const upload = h('label', { class: 'btn small secondary', for: `photo-${pid}`, html: `${icon('camera')} Use a photo` });
@@ -274,11 +284,10 @@ export function openContestants(get: () => [AvatarConfig, AvatarConfig], set: (p
       for (const s of [skin, hairColor, shirt]) {
         s.list.querySelectorAll<HTMLElement>('.swatch').forEach((b) => b.classList.toggle('on', cfg.mode === 'art' && b.dataset.c === cfg[s.key]));
       }
-      for (const c of [hair, facial]) {
+      for (const c of [hair, facial, jaw, outfit, jewelry]) {
         c.list.querySelectorAll<HTMLElement>('.chip-btn').forEach((b) => b.classList.toggle('on', b.dataset.v === cfg[c.key]));
       }
-      glasses.classList.toggle('on', cfg.glasses);
-      jaw.classList.toggle('on', cfg.jaw === 'soft');
+      for (const b of [glasses, earrings, lashes]) b.classList.toggle('on', !!cfg[b.dataset.flag as 'glasses' | 'earrings' | 'lashes']);
       removePhoto.hidden = cfg.mode !== 'photo';
       cropRow.hidden = cfg.mode !== 'photo' || !images[pid];
     };
@@ -287,11 +296,14 @@ export function openContestants(get: () => [AvatarConfig, AvatarConfig], set: (p
       h('div', { class: 'ed-row photo-row' }, upload, file, removePhoto),
       cropRow,
       skin.wrap,
+      jaw.wrap,
       hair.wrap,
       hairColor.wrap,
       facial.wrap,
+      outfit.wrap,
       shirt.wrap,
-      h('div', { class: 'ed-row' }, h('div', { class: 'ed-label' }, 'Extras'), h('div', { class: 'chips' }, glasses, jaw)),
+      jewelry.wrap,
+      h('div', { class: 'ed-row' }, h('div', { class: 'ed-label' }, 'Extras'), h('div', { class: 'chips' }, glasses, earrings, lashes)),
     );
     col.append(h('h3', {}, NAMES[pid]), preview, controls);
     draw();
@@ -299,7 +311,7 @@ export function openContestants(get: () => [AvatarConfig, AvatarConfig], set: (p
   };
 
   body.append(
-    h('p', { class: 'note' }, 'Match each portrait to the real contestant, or upload a photo and crop it. Photos stay in this browser and your private game save.'),
+    h('p', { class: 'note' }, 'The portraits are drawn from your photos. Fine-tune them here, or upload a photo and crop it. Photos stay in this browser and your private game save.'),
     h('div', { class: 'ed-cols' }, column(0), column(1)),
   );
   openDialog({ title: 'Contestants', body, wide: true, className: 'contestants' });

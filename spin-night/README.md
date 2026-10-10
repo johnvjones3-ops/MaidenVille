@@ -59,6 +59,7 @@ These are based on places and events checked against current local sources in Oc
 
 ## Known limitations
 
-- The contestant photos and the earlier `John_and_Lex_Spin_Night.html` were not available when this was built, so the game was written from the written spec. John's illustrated portrait follows the description (deep brown skin, short black hair, trimmed beard). Lex's look is a placeholder to set in **Contestants**. Each player can switch skin tone, hair, facial hair, glasses and shirt, or upload a photo and crop it.
+- The illustrated portraits are drawn from John and Lex's photos. Their skin tones were averaged across sunlit and indoor shots. John has a lined-up short cut, a full trimmed beard, a cream knit polo and a gold chain. Lex has sleek pulled-back hair with curls at the back, small hoops, and a black halter with a pendant. The photos themselves are not in the repository or the build. **Contestants** can fine-tune each portrait (skin tone, face shape, hair, facial hair, outfit, jewelry) or use an uploaded photo instead, which is kept only in that browser and the player's private save.
+- The earlier `John_and_Lex_Spin_Night.html` was not available, so the game was built from the written spec.
 - On iPhone and iPad, sound starts after the first tap, as Safari requires. On iOS 17+ it plays even with the ringer switch on silent.
 - Answers must be spelled correctly. Only case, spaces and punctuation are forgiven, and `&` counts as AND.

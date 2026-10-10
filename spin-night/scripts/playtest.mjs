@@ -138,7 +138,7 @@ check(await page.locator('.ed-col.p0 .ed-preview image').count(), 'uploading a p
 await page.locator('.ed-col.p0 .ed-crop input').first().fill('180');
 await shot('contestants');
 await wait(600);
-const savedAv = await page.evaluate(() => JSON.parse(localStorage.getItem('spinnight.avatars.v1')).data);
+const savedAv = await page.evaluate(() => JSON.parse(localStorage.getItem('spinnight.avatars2.v1')).data);
 check(savedAv[0].mode === 'photo' && savedAv[0].photo.startsWith('data:image/jpeg') && savedAv[1].hair === 'curly', 'portraits are saved');
 await page.locator('.ed-col.p0 .ed-row.photo-row .btn.ghost').click();
 await page.keyboard.press('Escape');
