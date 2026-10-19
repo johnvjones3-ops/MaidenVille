@@ -139,7 +139,6 @@ export function settleRun(save: SaveManager, r: RunSummary): Settlement {
     return { alreadySettled: true, starsBanked: 0, bonusStars: 0, goals: [], achievements: [], newBest: false, best: rec?.bestScore ?? 0 };
   }
   d.settledRuns.push(r.runId);
-  if (d.settledRuns.length > 50) d.settledRuns.splice(0, d.settledRuns.length - 50);
 
   const competitive = r.mode !== 'explore';
   let banked = 0;
@@ -177,10 +176,10 @@ export function settleRun(save: SaveManager, r: RunSummary): Settlement {
   }
   if (hasExplorerBadge(save)) grantAchievement(save, 'a_explorer', achievements);
 
-  bonus += achievements.length * REWARDS.achievementStars;
+  if (competitive) bonus += achievements.length * REWARDS.achievementStars;
   d.stars += banked + bonus;
   d.totalStarsEarned += banked + bonus;
-  if (d.totalStarsEarned >= 500 && !d.achievements.includes('a_stars500')) {
+  if (competitive && d.totalStarsEarned >= 500 && !d.achievements.includes('a_stars500')) {
     grantAchievement(save, 'a_stars500', achievements);
     d.stars += REWARDS.achievementStars;
     d.totalStarsEarned += REWARDS.achievementStars;

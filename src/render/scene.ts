@@ -71,7 +71,7 @@ export class SceneManager {
           col += vec3(1.0,0.75,0.4) * pow(sd, 40.0) * 0.9 + vec3(1.0,0.6,0.3) * pow(sd, 6.0) * 0.25;
           col = mix(col, vec3(1.0,0.92,0.75), smoothstep(0.9985, 0.9995, sd));
           // soft warm haze band near the horizon
-          col = mix(col, vec3(1.0,0.82,0.62), smoothstep(0.12, 0.0, abs(h)) * 0.35);
+          col = mix(col, vec3(1.0,0.82,0.62), (1.0 - smoothstep(0.0, 0.12, abs(h))) * 0.35);
           gl_FragColor = vec4(col, 1.0);
           #include <colorspace_fragment>
         }`,

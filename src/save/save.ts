@@ -1,5 +1,9 @@
 // SaveManager: versioned, validated local progress. Corrupted or unavailable storage falls back gracefully.
 
+import { LANDMARKS } from '../world/landmarks';
+import { MISSIONS } from '../sim/missions';
+import { ACHIEVEMENTS, GOALS } from './progression';
+
 import { COSMETICS, DEFAULT_EQUIPPED, GAME, type CosmeticCategory, type QualityId } from '../config';
 
 export interface Settings {
@@ -30,7 +34,7 @@ export interface SaveData {
   missionsDelivered: string[]; // distinct mission ids ever delivered
   tutorialDone: boolean;
   records: { explorer: ModeRecord; challenge: ModeRecord };
-  settledRuns: string[]; // recent run ids already paid out
+  settledRuns: string[]; // persistent payout ledger; never forget an already-paid run
   wordsCompleted: number;
 }
 
@@ -86,9 +90,9 @@ export function sanitize(raw: unknown): SaveData {
     if (typeof v === 'string' && item && item.category === cat && owned.has(v)) equipped[cat] = v;
   }
   const rec = (x: any): ModeRecord => ({
-    bestScore: num(x?.bestScore, 0),
-    bestDistance: num(x?.bestDistance, 0),
-    runs: num(x?.runs, 0),
+    bestScore: Math.floor(num(x?.bestScore, 0)),
+    bestDistance: Math.floor(num(x?.bestDistance, 0)),
+    runs: Math.floor(num(x?.runs, 0)),
   });
   const quality = s.quality === 'low' || s.quality === 'medium' || s.quality === 'high' ? s.quality : def.settings.quality;
   return {
@@ -105,13 +109,13 @@ export function sanitize(raw: unknown): SaveData {
     totalStarsEarned: Math.floor(num(r.totalStarsEarned, 0)),
     owned: [...owned],
     equipped,
-    stamps: strArr(r.stamps),
-    achievements: strArr(r.achievements),
-    goalsCompleted: strArr(r.goalsCompleted),
-    missionsDelivered: strArr(r.missionsDelivered),
+    stamps: strArr(r.stamps, new Set(LANDMARKS.map(l => l.id))),
+    achievements: strArr(r.achievements, new Set(ACHIEVEMENTS.map(a => a.id))),
+    goalsCompleted: strArr(r.goalsCompleted, new Set(GOALS.map(g => g.id))),
+    missionsDelivered: strArr(r.missionsDelivered, new Set(MISSIONS.map(m => m.id))),
     tutorialDone: bool(r.tutorialDone, false),
     records: { explorer: rec(r.records?.explorer), challenge: rec(r.records?.challenge) },
-    settledRuns: strArr(r.settledRuns).slice(-50),
+    settledRuns: strArr(r.settledRuns),
     wordsCompleted: Math.floor(num(r.wordsCompleted, 0)),
   };
 }
@@ -163,6 +167,13 @@ export class SaveManager {
     try {
       const parsed = JSON.parse(text);
       if (!parsed || typeof parsed !== 'object') this.recovered = true;
+      if (parsed?.version !== undefined && parsed.version !== GAME.saveVersion) {
+        this.recovered = true;
+        try { this.storage.setItem(this.key + '-version-backup', text); } catch { /* best effort */ }
+        const fresh = defaultSave();
+        fresh.settings = sanitize({ settings: parsed.settings }).settings;
+        return fresh;
+      }
       return sanitize(parsed);
     } catch {
       this.recovered = true;

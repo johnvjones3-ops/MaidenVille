@@ -6,7 +6,9 @@ import type { Action } from '../sim/run';
 
 export class InputManager {
   /** Only true while gameplay should consume input. */
-  enabled = false;
+  private active = false;
+  get enabled() { return this.active; }
+  set enabled(value: boolean) { this.active = value; if (!value) this.start = null; }
   onAction: (a: Action) => void = () => {};
   onPause: () => void = () => {};
   private start: { id: number; x: number; y: number; fired: boolean } | null = null;
@@ -23,6 +25,7 @@ export class InputManager {
   private key(e: KeyboardEvent) {
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (t?.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
     if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
       if (!e.repeat) this.onPause();
       return;
@@ -99,7 +102,11 @@ export class InputManager {
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (this.enabled) this.onAction(a);
+      if (this.enabled && e.isPrimary !== false) this.onAction(a);
+    });
+    // Keyboard and assistive-technology activation; pointer clicks already fired above.
+    el.addEventListener('click', (e) => {
+      if (e.detail === 0 && this.enabled) { e.preventDefault(); this.onAction(a); }
     });
   }
 }

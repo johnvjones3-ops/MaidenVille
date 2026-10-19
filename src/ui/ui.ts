@@ -89,12 +89,24 @@ export class UI {
     root.append(this.hud, this.bannerEl, this.promptEl, this.toasts, this.countEl, this.touchEl, this.exploreEl, this.screen, this.fadeEl);
     this.buildHud();
     this.buildTouch();
+    // Keep keyboard navigation inside the visible menu.
+    this.screen.addEventListener('keydown', (event) => {
+      if (event.key !== 'Tab') return;
+      const nodes = [...this.screen.querySelectorAll<HTMLElement>('button:not([disabled]), input, select, [tabindex="0"]')].filter(n => n.offsetParent !== null);
+      if (!nodes.length) return;
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
   }
 
   // ------------------------------------------------------------------ generic screen handling
   private open(screen: HTMLElement, opts: { modal?: boolean } = {}) {
     this.lastFocus = document.activeElement as HTMLElement | null;
     this.screen.replaceChildren(screen);
+    this.hud.inert = true;
+    this.touchEl.inert = true;
+    this.exploreEl.inert = true;
     this.screen.classList.toggle('modal', !!opts.modal);
     this.screen.classList.add('active');
     requestAnimationFrame(() => {
@@ -105,6 +117,9 @@ export class UI {
 
   closeScreen() {
     this.screen.replaceChildren();
+    this.hud.inert = false;
+    this.touchEl.inert = false;
+    this.exploreEl.inert = false;
     this.screen.classList.remove('active', 'modal');
   }
 
@@ -625,7 +640,7 @@ export class UI {
     // simple top-down map of the loop with landmark buttons
     const W = 340;
     const H = 340;
-    const toMap = (x: number, z: number) => [((x + 70) / 590) * W, ((z + 370) / 590) * H];
+    const toMap = (x: number, z: number) => [((x + 320) / 560) * W, ((z + 370) / 560) * H];
     const pts: string[] = [];
     for (let s = 0; s < ROUTE.length; s += 8) {
       const p = ROUTE.pose(s);

@@ -6,12 +6,12 @@ MaidenVille Runner! is a 3D endless runner for kids, starring **Maddy Maiden**. 
 
 ## Run it
 
-Requirements: Node 18 or newer (developed on Node 22).
+Requirements: Node 22.12+ recommended (Node 20.19+ supported), npm, and a browser with WebGL 2.
 
 ```bash
-npm install        # uses the committed package-lock.json
+npm ci             # installs the exact committed lockfile
 npm run dev        # dev server at http://localhost:5173
-npm run build      # type-check + production build into dist/
+npm run build      # type-check + production dist/ + self-contained offline HTML
 npm run preview    # serve dist/ at http://localhost:4173
 npm test           # vitest: route reachability, rewards, letters, collisions, saves, restart
 npm run typecheck
@@ -52,7 +52,7 @@ Each swipe triggers exactly one action. The direction locks once per gesture, an
   - Emergency Station (EMERGENCY 911, FD 118 and PD 67, plus a fire engine and a police car)
   - The **Turquoise-Door House** and the **Pink-Door House**
 - **A winding route built around the landmarks**: a closed loop of 12 streets with turns in both directions (`src/world/route.ts`), so world coordinates stay bounded forever. Every landmark stands at the **end of a street, straight ahead of Maddy and centred on screen**. The road then turns in front of it, so the building gets bigger the whole way down the street. The two colorful houses stand side by side at the first junction. Filler buildings line the sides, and Maddy's Imagination Park and the Celebration Plaza sit at the ends of two more streets.
-- **The first lap covers every landmark** in about 2.5 minutes at beginner speed. This is tested.
+- **The introductory tour covers every landmark** in under three minutes at beginner speed, without requiring speed power-ups. This is tested.
 - **Hazard-free zones** around the tutorial, the corners, the last 34 m before each landmark, glide flights and landings. Zone banners appear low on the screen so they never cover the landmark ahead.
 - **Obstacles**: foam hurdles, puddles, low festival arches, padded parcel stacks and "LANE CLOSED FOR FUN" lanes. Each has its own colour, silhouette and floor markings.
 - **Power-ups**: Star Magnet, Bubble Shield, Rainbow Sneakers (with a grace window afterwards) and Imagination Glide (clears and reserves its flight and landing span). Picking up a power-up that's already active refreshes its timer instead of stacking it. Each shows a ring timer that blinks before it runs out.
@@ -94,37 +94,24 @@ src/game.ts                state machine: loading → intro → title → transi
   - Obstacles and pickups come from pools, so a run never adds scene objects.
   - Device pixel ratio is capped per quality level.
 
-## Verification
+## Verification in this delivery
 
-These checks were actually run in this environment:
-
-- `npm run typecheck` and `npm run build` pass.
-- `npm test`: **32 tests pass**. They cover:
-  - Route continuity.
-  - Generated courses validate at the maximum and starting speeds across 40 seeds × 4 km. This includes chunk boundaries, and no hazards appear in the tutorial, corners or landmark zones.
-  - An **autopilot that plays the real simulation** (real lane, jump and slide physics) survives 3 km in both modes on 6 seeds each with zero hits.
-  - The tour reaches all 7 landmarks within 180 s.
-  - The two-D MADDY rule and once-per-word rewards.
-  - Collisions: hearts, protection after a hit, no multi-hit, the shield absorbing exactly one bump, and Explore never taking damage.
-  - Glide landing safety and power-up renewal.
-  - Restart resets everything, and entity counts stay bounded over 300 s.
-  - Corrupted or invalid saves are repaired, and storage that throws is handled.
-  - Run payouts happen exactly once, even after a reload.
-- **Browser checks** were done in headless Chromium (Playwright, SwiftShader software WebGL). Screenshots were reviewed at 1280×720, 960×540, 800×600 and 390×844 (phone portrait) for:
-  - Intro, title, running, corners, every landmark, glide, pause, results, closet, passport, settings, Explore, the map and landmark cards.
-- **Scripted input check**:
-  - A mouse swipe gives exactly one lane change, and the arrow keys and A/D work.
-  - A swipe up jumps.
-  - Hiding the tab pauses the game and freezes the simulation.
-  - The canvas uses `touch-action: none`.
-- **Performance**: this was **not** measured on real devices. Software rendering in the sandbox ran at about 2–6 fps, which says nothing about GPU performance. A frame shows roughly 220–360 draw calls (including the shadow pass) and about 300k triangles. Use **Low** quality on older phones.
+- `npm test`: **47 tests passed** across four files.
+- `npm run typecheck`: passed.
+- Production build and offline bundling: passed.
+- Existing tests cover 40 seeded 4 km pattern streams per mode, starting/capped speeds, chunk boundaries, tutorial/corner safety, and an autopilot exercising real movement for 3 km on six seeds in each running mode.
+- Regression checks additionally cover reference-relative city geography, a complete seven-landmark tour within 180 seconds without speed power-ups, immediate Explore Stop/Go, skipped landmarks not receiving stamps, glide renewal and a later rainbow sprint, zero sightseeing currency/records, payout deduplication beyond 50 newer runs and reload, save version backup, invalid saved identifiers, and one-action swipe/cancel/button/keyboard behavior.
+- The input tests dispatch synthetic events against event targets; they are **not real browser or device tests**.
+- This session did **not** have the supported browser-preview capability. Fresh visual screenshots, phone/tablet/desktop browser interaction, audio listening, and real-device frame rates were therefore **not verified**. Prior repository screenshot/performance claims are not used as verification for this delivery.
+- Responsive CSS covers portrait/landscape, safe areas, reduced motion and compact phone controls. A visual/device review remains necessary before calling this release fully accepted.
 
 ## Reference notes and honest limitations
 
-- No reference images were attached in this build environment. Maddy's likeness and the landmarks come from the written, verified visual notes in the brief. The skin tone, the two-puff hairstyle, the outfit and the landmark identities all follow those notes. **The face is a stylized interpretation, not a precise facial match.** To refine it, edit:
+- `IMG_1625.jpeg` was retrieved and visually inspected for this delivery. The city route was re-authored to keep church upper-left, houses upper middle-left, school upper-right, emergency lower-left, hospital middle-left, and store foreground-right. Distances and connecting streets are gameplay adaptations rather than a pixel-for-pixel reconstruction.
+- The original portrait could not be located. Maddy uses the supplied appearance notes: brown skin, two fluffy puffs with a center part, navy WE ARE KNIGHTS tee, jeans and dark sneakers. **Her face remains a stylized interpretation, not a verified facial match.** Editable assets:
   - `MADDY_LOOK` in `src/config.ts` for colours.
   - `faceTexture()` and `shirtTexture()` in `src/render/textures.ts`.
-  - `buildMaddy()` in `src/render/character.ts`, which can be swapped for an imported glTF model.
+  - `buildMaddy()` in `src/render/character.ts`, replaceable with a glTF rig.
 - No reference photo is included in the build.
 - The green road markings in the original photo couldn't be read, so they were not reproduced.
 - The house names (Turquoise-Door / Pink-Door) are **game labels**.
@@ -133,6 +120,15 @@ These checks were actually run in this environment:
 - The city geometry is built once at load time for the chosen quality. Changing quality later adjusts the pixel ratio, shadows, fog and particles; reload to change how many trees and buildings are drawn.
 - Sound was generated but could not be listened to here. The checks only confirmed that no audio errors occurred.
 
-## Published build
+## Delivery files
 
-`npm run build:single` produces `dist/maidenville-runner.html`, a single self-contained page (all JS/CSS inlined, no network requests). That file is what was published as the claude.ai artifact.
+`npm run build` produces:
+
+- `dist/index.html` and bundled `dist/assets/`: the hosted game.
+- `dist/maidenville-runner.html`: a complete self-contained offline page, including CSS, JavaScript, viewport metadata and all procedural assets. Desktop browsers can open it directly; mobile file-preview apps may not execute HTML games, so use the hosted link on a phone.
+
+There are no remote fonts, audio, models or textures required by gameplay. Hosting authentication is separate from the game: the supplied hosted preview is private, while the exported game itself has no account requirement.
+
+## Changes in 1.1.0
+
+Reused the existing game in this repository and corrected its reference geography. Fixed immediate sightseeing stopping, renewed-glide landing reservation, stale swipe cancellation, accessible touch-button activation, asynchronous pause during camera transitions, inspected-place results, sightseeing tutorial completion, old-result payout replay, unsupported save versions, and corrupt progress identifiers. Added menu focus containment, a WebGL 2 startup/retry screen, smaller phone controls and a complete offline HTML export. Unrelated projects in this repository are unchanged.

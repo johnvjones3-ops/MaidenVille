@@ -1,12 +1,13 @@
-// Bundle dist/ into one self-contained HTML page (used to publish the game as a single file).
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
-const files = readdirSync('dist/assets');
-const css = readFileSync(`dist/assets/${files.find((f) => f.endsWith('.css'))}`, 'utf8');
-const js = readFileSync(`dist/assets/${files.find((f) => f.endsWith('.js'))}`, 'utf8');
-const html = `<title>MaidenVille Runner!</title>
-<style>${css}</style>
-<div id="app"><div id="stage"></div><div id="ui" aria-live="polite"></div></div>
-<script type="module">${js}</script>
-`;
+// Preserve the production document and inline its bundled local assets for offline play.
+import { readFileSync, writeFileSync } from 'node:fs';
+let html = readFileSync('dist/index.html', 'utf8');
+html = html.replace(/<script[^>]+src="([^\"]+)"[^>]*><\/script>/g, (_tag, src) => {
+  const js = readFileSync(`dist/${src.replace(/^\.\//, '')}`, 'utf8');
+  return `<script type="module">${js.replace(/<\/script/gi, '<\\/script')}</script>`;
+});
+html = html.replace(/<link[^>]+href="([^\"]+\.css)"[^>]*>/g, (_tag, href) => {
+  const css = readFileSync(`dist/${href.replace(/^\.\//, '')}`, 'utf8');
+  return `<style>${css}</style>`;
+});
 writeFileSync('dist/maidenville-runner.html', html);
-console.log(`dist/maidenville-runner.html (${(html.length / 1024).toFixed(0)} KB)`);
+console.log(`Offline game: dist/maidenville-runner.html (${Math.round(Buffer.byteLength(html)/1024)} KiB)`);

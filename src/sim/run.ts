@@ -206,7 +206,8 @@ export class RunSim {
     // --- speed
     let target: number;
     if (m.id === 'explore') {
-      this.exploreSpeed += ((this.stopped ? 0 : m.startSpeed) - this.exploreSpeed) * Math.min(1, dt * 2.5);
+      if (this.stopped) { this.exploreSpeed = 0; this.speed = 0; }
+      else this.exploreSpeed += (m.startSpeed - this.exploreSpeed) * Math.min(1, dt * 2.5);
       target = this.exploreSpeed;
     } else {
       target = this.baseSpeed(this.d);
@@ -454,14 +455,12 @@ export class RunSim {
         renewed = this.glideT > 0;
         if (renewed) {
           this.glideT = Math.max(this.glideT, POWERUPS.glide.duration - 0.9);
-          break;
-        }
-        this.glideT = POWERUPS.glide.duration;
+        } else this.glideT = POWERUPS.glide.duration;
         this.sliding = false;
         this.pendingSlide = false;
         // Guarantee a clear flight and landing: remove hazards and reserve the span.
-        const speed = Math.max(this.speed, this.mode.maxSpeed) * (this.rainbowT > 0 ? POWERUPS.rainbow.speedMul : 1);
-        const span = (POWERUPS.glide.duration + POWERUPS.glide.landing) * speed + 18;
+        const speed = Math.max(this.speed, this.mode.maxSpeed * POWERUPS.rainbow.speedMul);
+        const span = (this.glideT + POWERUPS.glide.landing) * speed + 18;
         const d0 = this.d - 2;
         const d1 = this.d + span;
         this.gen.reserve(d0, d1);
@@ -498,6 +497,7 @@ export class RunSim {
       const lap = Math.floor((this.d - l.s + 60) / ROUTE.length);
       const key = `${l.id}:${lap}`;
       if (crossed(s0, s1, ROUTE.wrap(l.s - 60)) && !this.approached.has(key)) {
+        if (this.approached.size > LANDMARKS.length * 2) this.approached.clear();
         this.approached.add(key);
         this.events.push({ type: 'approach', id: l.id });
       }
@@ -547,6 +547,7 @@ export class RunSim {
     this.d += delta;
     this.prevD = this.d;
     this.lastHitD = this.d;
+    this.cleanup();
     this.extend();
     this.lastZone = '';
   }

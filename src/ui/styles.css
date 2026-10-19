@@ -1240,3 +1240,17 @@ select:focus-visible {
     max-height: 100%;
   }
 }
+
+/* Compact phones retain independent, thumb-sized controls without overflow. */
+@media (max-width: 420px) {
+  .tbtn { width: 56px; height: 56px; }
+  .tgroup { gap: 8px; }
+  .prompt { width: calc(100% - 24px); }
+  .prompt-in { white-space: normal; font-size: 1rem; }
+  .letters { gap: 2px; }
+  .letters .slot { width: 25px; height: 27px; }
+  .hud { grid-template-columns: 1fr auto auto; column-gap: 7px; }
+  .map-pin { font-size: .66rem; padding: 4px 5px; }
+}
+.reduced-motion .hearts.blink { animation: none; outline: 2px solid var(--gold); }
+.reduced-motion .countdown, .reduced-motion .toast { animation: none; }

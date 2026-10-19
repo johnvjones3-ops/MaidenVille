@@ -58,33 +58,24 @@ export const CORNER_RADIUS = 16;
  * Maddy's landmarks, so each building is seen straight ahead in the centre of the screen before the road turns.
  */
 export const CORNERS: Array<{ x: number; z: number }> = [
-  { x: 0, z: 0 }, // start intersection (Celebration Plaza ahead when arriving)
-  { x: 0, z: -160 }, // colorful houses ahead → turn right
-  { x: 140, z: -160 }, // Imagination Park ahead → turn left
-  { x: 140, z: -300 }, // Kingdom School ahead → turn right
-  { x: 300, z: -300 }, // turn right
-  { x: 300, z: -180 }, // Trinity Church ahead → turn left
-  { x: 440, z: -180 }, // turn right
-  { x: 440, z: 40 }, // Super Target ahead → turn right
-  { x: 280, z: 40 }, // turn left
-  { x: 280, z: 140 }, // Hospital ahead → turn right
-  { x: 140, z: 140 }, // Emergency Station ahead → turn right
-  { x: 140, z: 0 }, // turn left
+  { x: 0, z: 80 }, // foreground intersection; north along Maiden Main Street
+  { x: 0, z: -160 }, // colorful houses, upper middle-left
+  { x: 100, z: -160 }, // connecting street to the school
+  { x: 100, z: -280 }, // Kingdom School, upper right
+  { x: -160, z: -280 }, // landscaped northern connection
+  { x: -160, z: -160 }, // Trinity Church, upper left
+  { x: -240, z: -160 }, // western neighborhood street
+  { x: -240, z: 100 }, // emergency station, lower left
+  { x: -100, z: 100 }, // Helping Hands connection
+  { x: -100, z: 0 }, // hospital, middle foreground-left
+  { x: 100, z: 0 }, // Super Target, right foreground
+  { x: 100, z: 80 }, // return through the foreground intersection
 ];
 
 const STREET_NAMES = [
-  'Maiden Main Street',
-  'Rainbow Row',
-  'Kingdom School Block',
-  'Bookworm Way',
-  'Trinity Garden Walk',
-  'Garden Lane',
-  'Super Target Square',
-  'Imagination Parkway',
-  'Helping Hands Block',
-  'Helping Hands Block',
-  'Friendly Street',
-  'Maddy Maiden Way',
+  'Maiden Main Street', 'Rainbow Row', 'Kingdom School Block', 'Bookworm Way',
+  'Trinity Garden Walk', 'Garden Lane', 'Helping Hands Block', 'Friendly Street',
+  'Helping Hands Block', 'Super Target Square', 'Imagination Parkway', 'Maddy Maiden Way',
 ];
 
 export class CityRoute {

@@ -273,10 +273,12 @@ export class Game {
     this.state = 'transition';
     this.afterCountdown = mode === 'explore' ? 'exploring' : 'running';
     if (reduced || fromResults) {
+      const startingSim = this.sim;
       void this.ui.fade(true, reduced ? 200 : 250).then(() => {
+        if (this.sim !== startingSim) return;
         this.camDir.set('chase', 0, ctx);
         void this.ui.fade(false, 250);
-        this.beginCountdown();
+        if (this.state === 'transition') this.beginCountdown();
       });
     } else {
       this.camDir.set('chase', 1.5, ctx);
@@ -294,6 +296,7 @@ export class Game {
     this.countdownT = 0;
     this.countdownStep = -1;
     this.input.enabled = false;
+    if (document.hidden) this.pause();
   }
 
   private updateCountdown(dt: number) {
@@ -348,7 +351,7 @@ export class Game {
   }
 
   resume() {
-    if (this.state !== 'paused' || !this.sim) return;
+    if (this.state !== 'paused' || !this.sim || document.hidden) return;
     this.ui.closeScreen();
     this.afterCountdown = this.pausedFrom;
     this.beginCountdown();
@@ -369,7 +372,7 @@ export class Game {
     if (!this.sim) return null;
     if (!this.lastSettlement) {
       this.lastSettlement = settleRun(this.save, this.sim.summary(this.runId));
-      if (this.sim.d > this.sim.gen.tutorialEnd && !this.save.data.tutorialDone) {
+      if (this.sim.mode.scored && this.sim.d > this.sim.gen.tutorialEnd && !this.save.data.tutorialDone) {
         this.save.data.tutorialDone = true;
         this.save.save();
       }
@@ -442,6 +445,7 @@ export class Game {
     const w = landmarkWorld(LANDMARK_BY_ID[id]);
     this.inspectTarget = new THREE.Vector3(w.x, 0, w.z);
     this.camDir.set('inspect', this.save.data.settings.reducedMotion ? 0 : 1.0, this.camCtx());
+    this.sim.visited.add(id);
     if (stamp(this.save, id)) this.ui.toast(`${COPY.discovered} ${LANDMARK_BY_ID[id].name}`, 'good', 'passport');
     this.ui.showExploreBar(null);
     this.ui.showLandmarkCard(id, this.save.data.stamps.includes(id), () => this.closeInspect());
@@ -884,7 +888,7 @@ export class Game {
     this.rig.wings.visible = !!(running && sim!.gliding);
     // invulnerability blink (gentle; a slower pulse with reduced motion)
     const blink = running && sim!.invulnT > 0 && sim!.mode.damage;
-    this.rig.body.visible = !blink || Math.floor(this.time * (s.reducedMotion ? 4 : 12)) % 2 === 0;
+    this.rig.body.visible = !blink || s.reducedMotion || Math.floor(this.time * 4) % 2 === 0;
 
     // trails
     const trail = this.save.data.equipped.trail;
